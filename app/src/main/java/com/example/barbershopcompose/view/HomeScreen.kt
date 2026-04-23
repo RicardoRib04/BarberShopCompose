@@ -34,7 +34,7 @@ import com.example.barbershopcompose.ui.theme.SurfaceGray
 @Composable
 fun HomeScreen(
     onAgendarClick: () -> Unit,
-    onMenuClick: () -> Unit, // Mudei para bater com o NavGraph
+    onMenuClick: () -> Unit,
     onAgendamentosClick: () -> Unit
 ) {
     val listaServicos = listOf(
@@ -50,21 +50,21 @@ fun HomeScreen(
     Scaffold(
         bottomBar = {
             NavigationBar(containerColor = SurfaceGray) {
-                // ITEM INÍCIO
+
                 NavigationBarItem(
                     selected = true,
-                    onClick = { /* Já estamos no início */ },
+                    onClick = {  },
                     icon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color.White) },
                     label = { Text("Início", color = Color.White) }
                 )
-                // ITEM AGENDAMENTOS
+
                 NavigationBarItem(
                     selected = false,
                     onClick = onAgendamentosClick, // USANDO A FUNÇÃO CORRETA
                     icon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray) },
                     label = { Text("Agendamentos", color = Color.Gray) }
                 )
-                // ITEM MENU (PERFIL)
+
                 NavigationBarItem(
                     selected = false,
                     onClick = onMenuClick, // AQUI ESTAVA O ERRO! AGORA CHAMA O PERFIL

@@ -12,9 +12,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // BarberShopComposeTheme é o tema padrão do seu projeto
             BarberShopComposeTheme {
-                // Aqui chamamos a lógica de navegação que você criou na pasta 'navigation'
+
                 SetupNavGraph()
             }
         }

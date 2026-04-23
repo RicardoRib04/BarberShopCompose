@@ -37,11 +37,10 @@ import java.util.Calendar
 @Composable
 fun AgendamentoScreen(onFinalizarClick: () -> Unit, onBackClick: () -> Unit) {
 
-    // --- LÓGICA DE DATA ---
+
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
-    // Estados para armazenar a data selecionada
     var dia by remember { mutableIntStateOf(calendar.get(Calendar.DAY_OF_MONTH)) }
     var mes by remember { mutableIntStateOf(calendar.get(Calendar.MONTH)) }
     var ano by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
@@ -60,7 +59,7 @@ fun AgendamentoScreen(onFinalizarClick: () -> Unit, onBackClick: () -> Unit) {
     // Impede selecionar datas passadas
     datePickerDialog.datePicker.minDate = calendar.timeInMillis
 
-    // --- RESTANTE DOS ESTADOS ---
+
     val barbeiros = listOf(
         Pair("Ricardinho", R.drawable.fotoperfil),
         Pair("Oliveira", R.drawable.bigode),

@@ -28,7 +28,7 @@ fun SetupNavGraph() {
             HomeScreen(
                 onAgendarClick = { navController.navigate("agendamento") },
                 onMenuClick = { navController.navigate("perfil") },
-                // AGORA APONTA PARA A TELA DE LISTA:
+
                 onAgendamentosClick = { navController.navigate("meus_agendamentos") }
             )
         }
