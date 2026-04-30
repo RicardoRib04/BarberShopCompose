@@ -33,7 +33,7 @@ import com.example.barbershopcompose.ui.theme.SurfaceGray
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onAgendarClick: () -> Unit,
+    onAgendarClick: (String) -> Unit,
     onMenuClick: () -> Unit, // Mudei para bater com o NavGraph
     onAgendamentosClick: () -> Unit
 ) {
@@ -126,7 +126,12 @@ fun HomeScreen(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(listaServicos) { servico ->
-                    ServicoCard(servico = servico, onAgendarClick = onAgendarClick)
+                    ServicoCard(
+                        servico = servico,
+                        // Passando uma lambda que recebe o clique do cartão
+                        // e dispara a função da HomeScreen passando o NOME do serviço
+                        onAgendarClick = { onAgendarClick(servico.nome) }
+                    )
                 }
             }
         }

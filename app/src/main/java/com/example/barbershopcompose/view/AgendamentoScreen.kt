@@ -29,13 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.barbershopcompose.R
+import com.example.barbershopcompose.data.salvarAgendamentoReal
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.example.barbershopcompose.ui.theme.SurfaceGray
 import java.util.Calendar
 
 @Composable
-fun AgendamentoScreen(onFinalizarClick: () -> Unit, onBackClick: () -> Unit) {
+fun AgendamentoScreen(servicoEscolhido: String,onFinalizarClick: () -> Unit, onBackClick: () -> Unit) {
 
     // --- LÓGICA DE DATA ---
     val context = LocalContext.current
@@ -83,7 +84,15 @@ fun AgendamentoScreen(onFinalizarClick: () -> Unit, onBackClick: () -> Unit) {
                 Button(
                     onClick = {
                         showConfirmDialog = false
-                        showSuccessDialog = true
+                        salvarAgendamentoReal(
+                            profissional = barbeiroSelecionado.first,
+                            data = dataFormatada,
+                            horario = horarioSelecionado,
+                            servico = servicoEscolhido
+                        ) {
+                            showSuccessDialog = true
+                        }
+
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
