@@ -9,6 +9,8 @@ import com.example.barbershopcompose.view.HomeScreen
 import com.example.barbershopcompose.view.AgendamentoScreen
 import com.example.barbershopcompose.view.PerfilScreen
 import com.example.barbershopcompose.view.AgendamentosConfirmadosScreen // Importe a tela nova
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @Composable
 fun SetupNavGraph() {
@@ -26,17 +28,28 @@ fun SetupNavGraph() {
 
         composable("home") {
             HomeScreen(
-                onAgendarClick = { navController.navigate("agendamento") },
+                // 1. Agora a HomeScreen vai enviar o nome do serviço!
+                onAgendarClick = { nomeDoServico ->
+                    // A rota será algo como: "agendamento/Corte Kids"
+                    navController.navigate("agendamento/$nomeDoServico")
+                },
                 onMenuClick = { navController.navigate("perfil") },
-                // AGORA APONTA PARA A TELA DE LISTA:
                 onAgendamentosClick = { navController.navigate("meus_agendamentos") }
             )
         }
 
-        composable("agendamento") {
+        // 2. A rota do agendamento agora espera receber a palavra {servico}
+        composable(
+            route = "agendamento/{servico}",
+            arguments = listOf(navArgument("servico") { type = NavType.StringType })
+        ) { backStackEntry ->
+
+            // 3. Pega a palavra que veio pela rota
+            val servicoClicado = backStackEntry.arguments?.getString("servico") ?: "Serviço Padrão"
+
             AgendamentoScreen(
+                servicoEscolhido = servicoClicado, // 4. Passa a palavra para a sua tela!
                 onFinalizarClick = {
-                    // Após sucesso, vai direto para a lista de agendamentos
                     navController.navigate("meus_agendamentos") {
                         popUpTo("home") { inclusive = false }
                     }
