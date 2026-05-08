@@ -8,11 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,14 +25,34 @@ import com.example.barbershopcompose.components.ServicoCard
 import com.example.barbershopcompose.model.Servico
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.SurfaceGray
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onAgendarClick: (String) -> Unit,
-    onMenuClick: () -> Unit, // Mudei para bater com o NavGraph
+    onMenuClick: () -> Unit,
     onAgendamentosClick: () -> Unit
 ) {
+    // --- LÓGICA DE DADOS REAIS ---
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    var nomeUsuario by remember { mutableStateOf("...") } // Estado para o nome real
+
+    // Busca o nome no Firestore assim que a tela inicia
+    LaunchedEffect(Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            db.collection("usuarios").document(uid).get()
+                .addOnSuccessListener { document ->
+                    if (document != null && document.exists()) {
+                        nomeUsuario = document.getString("nome") ?: "Usuário"
+                    }
+                }
+        }
+    }
+
     val listaServicos = listOf(
         Servico("Corte kids (0 a 6 anos)", "R$ 50,00", "90 min", R.drawable.tipocorte),
         Servico("Barba modelada", "R$ 40,00", "45 min", R.drawable.bigode),
@@ -50,24 +66,21 @@ fun HomeScreen(
     Scaffold(
         bottomBar = {
             NavigationBar(containerColor = SurfaceGray) {
-                // ITEM INÍCIO
                 NavigationBarItem(
                     selected = true,
-                    onClick = { /* Já estamos no início */ },
+                    onClick = { /* Início */ },
                     icon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color.White) },
                     label = { Text("Início", color = Color.White) }
                 )
-                // ITEM AGENDAMENTOS
                 NavigationBarItem(
                     selected = false,
-                    onClick = onAgendamentosClick, // USANDO A FUNÇÃO CORRETA
+                    onClick = onAgendamentosClick,
                     icon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray) },
                     label = { Text("Agendamentos", color = Color.Gray) }
                 )
-                // ITEM MENU (PERFIL)
                 NavigationBarItem(
                     selected = false,
-                    onClick = onMenuClick, // AQUI ESTAVA O ERRO! AGORA CHAMA O PERFIL
+                    onClick = onMenuClick,
                     icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
                     label = { Text("Menu", color = Color.Gray) }
                 )
@@ -97,7 +110,8 @@ fun HomeScreen(
                 Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
             }
 
-            Text("Bem vindo, Ricardo", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            // MUDANÇA AQUI: Agora usa a variável dinâmica
+            Text("Bem vindo, $nomeUsuario", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -113,7 +127,9 @@ fun HomeScreen(
                     focusedContainerColor = SurfaceGray,
                     unfocusedContainerColor = SurfaceGray,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
                 )
             )
 
@@ -128,8 +144,6 @@ fun HomeScreen(
                 items(listaServicos) { servico ->
                     ServicoCard(
                         servico = servico,
-                        // Passando uma lambda que recebe o clique do cartão
-                        // e dispara a função da HomeScreen passando o NOME do serviço
                         onAgendarClick = { onAgendarClick(servico.nome) }
                     )
                 }

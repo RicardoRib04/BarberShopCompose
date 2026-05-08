@@ -4,42 +4,77 @@ import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
-fun salvarAgendamentoReal(profissional: String, data: String, horario: String, servico: String, onSucesso: () -> Unit) {
+/**
+ * Lógica para salvar agendamento com verificação de duplicidade
+ */
+fun salvarAgendamentoReal(
+    profissional: String,
+    data: String,
+    horario: String,
+    servico: String,
+    onSucesso: () -> Unit,
+    onErro: (String) -> Unit
+) {
     val db = FirebaseFirestore.getInstance()
+    val colecao = db.collection("agendamentos_teste")
 
-    val agendamento = hashMapOf(
-        "cliente" to "Cliente Padrão",
-        "profissional" to profissional,
-        "servico" to servico, // <--- Agora o serviço não é mais um texto fixo!
-        "data" to data,
-        "horario" to horario,
-        "timestamp" to System.currentTimeMillis()
-    )
+    colecao
+        .whereEqualTo("profissional", profissional)
+        .whereEqualTo("data", data)
+        .whereEqualTo("horario", horario)
+        .get()
+        .addOnSuccessListener { querySnapshot ->
+            if (querySnapshot.isEmpty) {
+                val agendamento = hashMapOf(
+                    "cliente" to "Cliente Padrão",
+                    "profissional" to profissional,
+                    "servico" to servico,
+                    "data" to data,
+                    "horario" to horario,
+                    "timestamp" to System.currentTimeMillis()
+                )
 
-    db.collection("agendamentos_teste")
-        .add(agendamento)
-        .addOnSuccessListener {
-            Log.d("FirestoreTest", "Sucesso! Documento salvo real")
-            onSucesso()
+                colecao.add(agendamento)
+                    .addOnSuccessListener {
+                        Log.d("FirestoreTest", "Sucesso!")
+                        onSucesso()
+                    }
+                    .addOnFailureListener { e -> onErro("Erro ao salvar: ${e.message}") }
+            } else {
+                onErro("Este horário já foi reservado com $profissional!")
+            }
         }
-        .addOnFailureListener { e ->
-            Log.w("FirestoreTest", "Erro ao salvar no banco!", e)
-        }
+        .addOnFailureListener { e -> onErro("Erro no banco: ${e.message}") }
 }
-fun buscarAgendamentos(onResultado: (List<Map<String, Any>>) -> Unit) {
-    val db = FirebaseFirestore.getInstance()
 
-    db.collection("agendamentos_teste")
+/**
+ * Busca a lista de todos os agendamentos
+ */
+fun buscarAgendamentos(onResultado: (List<Map<String, Any>>) -> Unit) {
+    FirebaseFirestore.getInstance().collection("agendamentos_teste")
         .orderBy("timestamp", Query.Direction.DESCENDING)
         .get()
         .addOnSuccessListener { resultado ->
-            val lista = mutableListOf<Map<String, Any>>()
-            for (documento in resultado) {
-                lista.add(documento.data)
-            }
+            val lista = resultado.documents.map { it.data ?: emptyMap() }
             onResultado(lista)
         }
-        .addOnFailureListener {
-            Log.w("FirestoreTest", "Erro ao buscar dados")
+}
+
+/**
+ * Busca horários ocupados para bloquear os botões na tela
+ */
+fun buscarHorariosOcupados(
+    profissional: String,
+    data: String,
+    onResultado: (List<String>) -> Unit
+) {
+    FirebaseFirestore.getInstance().collection("agendamentos_teste")
+        .whereEqualTo("profissional", profissional)
+        .whereEqualTo("data", data)
+        .get()
+        .addOnSuccessListener { snapshot ->
+            val ocupados = snapshot.documents.map { it.getString("horario") ?: "" }
+            onResultado(ocupados)
         }
+        .addOnFailureListener { onResultado(emptyList()) }
 }
