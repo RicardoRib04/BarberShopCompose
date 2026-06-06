@@ -26,15 +26,18 @@ import com.example.barbershopcompose.R
 import com.example.barbershopcompose.data.buscarAgendamentos
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
-    // 1. Criamos um "estado" para guardar a lista que virá do banco
     var listaAgendamentos by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
-    // 2. Assim que a tela abre, ele vai no Firebase buscar os dados reais
     LaunchedEffect(Unit) {
-        buscarAgendamentos { resultado ->
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        val emailLogado = currentUser?.email ?: ""
+
+        // Agora passamos apenas o e-mail, e a filtragem é blindada no helper
+        buscarAgendamentos(emailLogado) { resultado ->
             listaAgendamentos = resultado
         }
     }
@@ -45,7 +48,6 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
             .background(BackgroundBlack)
             .padding(16.dp)
     ) {
-        // Header conforme o Figma
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -69,7 +71,6 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
 
         Text("Filtrar por data", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
 
-        // Campo de Data
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -83,13 +84,10 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 3. A LISTA AGORA É DINÂMICA E VEM DO FIREBASE!
-        // LISTA DE CARDS AZUIS ATUALIZADA
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(listaAgendamentos) { agendamento ->
-                // Pegando os dados do banco
                 val dataStr = agendamento["data"] as? String ?: ""
-                val partesData = dataStr.split("/") // Quebra "11/6/2026" em partes
+                val partesData = dataStr.split("/")
                 val dia = partesData.getOrNull(0) ?: "--"
                 val mesNum = partesData.getOrNull(1) ?: "1"
 
@@ -97,26 +95,22 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                 val profissionalNome = agendamento["profissional"] as? String ?: "Profissional"
                 val horario = agendamento["horario"] as? String ?: "--:--"
 
-                // Chamando a nova função para obter a foto correta
                 val fotoCorreta = obterFotoProfissional(profissionalNome)
 
-                // Chamando o Cartão Azul atualizado
                 CardAgendamentoFigma(
                     dia = dia,
                     mes = abreviarMes(mesNum),
                     servico = servico,
                     preco = "R$ 50,00",
                     horario = horario,
-                    fotoProfissional = fotoCorreta, // Passando a foto correta
-                    nomeProfissional = profissionalNome // Passando o nome correto
+                    fotoProfissional = fotoCorreta,
+                    nomeProfissional = profissionalNome
                 )
             }
         }
     }
 }
 
-// Atualizamos o cartão para receber o nome do profissional dinamicamente
-// Componente de cartão atualizado para receber a foto e o nome dinâmicos
 @Composable
 fun CardAgendamentoFigma(
     dia: String,
@@ -124,8 +118,8 @@ fun CardAgendamentoFigma(
     servico: String,
     preco: String,
     horario: String,
-    fotoProfissional: Int, // Novo parâmetro: ID da foto
-    nomeProfissional: String // Novo parâmetro: Nome do barbeiro
+    fotoProfissional: Int,
+    nomeProfissional: String
 ) {
     Row(
         modifier = Modifier
@@ -139,14 +133,12 @@ fun CardAgendamentoFigma(
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                 Image(
-                    // AGORA A FOTO É DINÂMICA
                     painter = painterResource(id = fotoProfissional),
                     contentDescription = null,
                     modifier = Modifier.size(30.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop // Mantém a foto circular
+                    contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                // NOME DO BARBEIRO DINÂMICO
                 Text(nomeProfissional, color = Color.LightGray, fontSize = 14.sp)
             }
 
@@ -160,7 +152,6 @@ fun CardAgendamentoFigma(
             }
         }
 
-        // Bloco da Data Lateral
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(dia, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
             Text(mes, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -168,10 +159,6 @@ fun CardAgendamentoFigma(
     }
 }
 
-
-
-
-// Funçãozinha para transformar "6" em "JUN" e ficar bonito igual no Figma
 fun abreviarMes(mes: String): String {
     return when (mes) {
         "1", "01" -> "JAN"
@@ -189,12 +176,12 @@ fun abreviarMes(mes: String): String {
         else -> "MÊS"
     }
 }
-// Função para obter o ID da foto correta baseado no nome do barbeiro
+
 fun obterFotoProfissional(nome: String): Int {
     return when (nome) {
         "Oliveira" -> R.drawable.bigode
         "Ribeiro" -> R.drawable.tesoura
         "Ricardinho" -> R.drawable.fotoperfil
-        else -> R.drawable.fotoperfil // Foto padrão caso o nome não corresponda
+        else -> R.drawable.fotoperfil
     }
 }

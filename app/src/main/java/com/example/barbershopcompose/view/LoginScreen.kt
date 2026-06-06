@@ -30,6 +30,10 @@ fun LoginScreen(navController: NavController, onLoginClick: () -> Unit) {
     var senha by remember { mutableStateOf("") }
     var carregando by remember { mutableStateOf(false) }
 
+    // Estados para controlar o Popup de Esqueci a Senha
+    var mostrarDialogRecuperacao by remember { mutableStateOf(false) }
+    var emailRecuperacao by remember { mutableStateOf("") }
+
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
 
@@ -112,7 +116,7 @@ fun LoginScreen(navController: NavController, onLoginClick: () -> Unit) {
             )
         )
 
-        // "Não tem conta? Registrar" - AGORA FUNCIONAL
+        // "Não tem conta? Registrar"
         Row(modifier = Modifier.padding(top = 16.dp)) {
             Text("Não tem conta? ", color = Color.White, fontSize = 14.sp)
             Text(
@@ -122,14 +126,14 @@ fun LoginScreen(navController: NavController, onLoginClick: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier.clickable {
-                    navController.navigate("registrar") // Rota que definimos no NavGraph
+                    navController.navigate("registrar")
                 }
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botão Login com Lógica Firebase
+        // Botão Login
         if (carregando) {
             CircularProgressIndicator(color = PrimaryBlue)
         } else {
@@ -140,7 +144,7 @@ fun LoginScreen(navController: NavController, onLoginClick: () -> Unit) {
                         auth.signInWithEmailAndPassword(email.trim(), senha)
                             .addOnSuccessListener {
                                 carregando = false
-                                onLoginClick() // Chama a navegação para a Home
+                                onLoginClick()
                             }
                             .addOnFailureListener { e ->
                                 carregando = false
@@ -160,23 +164,65 @@ fun LoginScreen(navController: NavController, onLoginClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Esqueceu a senha? - AGORA FUNCIONAL
+        // Esqueceu a senha? - AGORA ABRE UM POPUP
         Text(
             "Esqueceu a senha?",
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable {
-                if (email.trim().isNotEmpty()) {
-                    auth.sendPasswordResetEmail(email.trim())
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "E-mail de recuperação enviado para: $email", Toast.LENGTH_LONG).show()
+                // Ao invés de tentar enviar direto, abrimos a caixinha (Dialog)
+                mostrarDialogRecuperacao = true
+            }
+        )
+    }
+
+    // --- POPUP (DIALOG) DE RECUPERAÇÃO DE SENHA ---
+    if (mostrarDialogRecuperacao) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogRecuperacao = false }, // Fecha se clicar fora
+            title = {
+                Text(text = "Recuperar Senha", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(text = "Digite seu e-mail de cadastro. Enviaremos um link para você redefinir sua senha.")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = emailRecuperacao,
+                        onValueChange = { emailRecuperacao = it },
+                        label = { Text("E-mail") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (emailRecuperacao.trim().isNotEmpty()) {
+                            auth.sendPasswordResetEmail(emailRecuperacao.trim())
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "E-mail de recuperação enviado!", Toast.LENGTH_LONG).show()
+                                    mostrarDialogRecuperacao = false // Fecha o dialog com sucesso
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Erro ao enviar. Verifique o e-mail digitado.", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            Toast.makeText(context, "Por favor, digite um e-mail válido.", Toast.LENGTH_SHORT).show()
                         }
-                        .addOnFailureListener {
-                            Toast.makeText(context, "Erro ao enviar e-mail. Verifique o endereço digitado.", Toast.LENGTH_SHORT).show()
-                        }
-                } else {
-                    Toast.makeText(context, "Digite seu e-mail no campo acima!", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                ) {
+                    Text("Enviar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { mostrarDialogRecuperacao = false }
+                ) {
+                    Text("Cancelar", color = Color.Gray)
                 }
             }
         )
