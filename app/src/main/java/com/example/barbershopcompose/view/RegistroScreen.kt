@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -16,8 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.barbershopcompose.R
@@ -29,7 +35,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var dataNascimento by remember { mutableStateOf("") } // NOVO CAMPO
+    var dataNascimento by remember { mutableStateOf("") } // Guardará apenas números
     var senha by remember { mutableStateOf("") }
     var carregando by remember { mutableStateOf(false) }
 
@@ -42,7 +48,7 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
-            .verticalScroll(rememberScrollState()), // Adicionado scroll para telas menores
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
@@ -67,8 +73,28 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
 
         // --- CAMPOS DE TEXTO ---
         CampoRegistro(label = "Nome Completo:", value = nome, onValueChange = { nome = it })
-        CampoRegistro(label = "Email:", value = email, onValueChange = { email = it })
-        CampoRegistro(label = "Data de Nascimento (DD/MM/AAAA):", value = dataNascimento, onValueChange = { dataNascimento = it })
+
+        CampoRegistro(
+            label = "Email:",
+            value = email,
+            onValueChange = { email = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+        )
+
+        // MUDANÇA AQUI: Campo de Data de Nascimento com Máscara e Teclado Numérico
+        CampoRegistro(
+            label = "Data de Nascimento (DD/MM/AAAA):",
+            value = dataNascimento,
+            onValueChange = { input ->
+                // Filtra para aceitar apenas números e no máximo 8 caracteres
+                val apenasNumeros = input.filter { char -> char.isDigit() }
+                if (apenasNumeros.length <= 8) {
+                    dataNascimento = apenasNumeros
+                }
+            },
+            visualTransformation = DateVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
 
         Text("Senha:", color = Color.White, modifier = Modifier.align(Alignment.Start).padding(start = 12.dp, top = 16.dp))
         TextField(
@@ -93,7 +119,8 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
         } else {
             Button(
                 onClick = {
-                    if (nome.isNotEmpty() && email.isNotEmpty() && senha.isNotEmpty() && dataNascimento.isNotEmpty()) {
+                    // Validando se todos os campos estão preenchidos e a data está completa (8 dígitos)
+                    if (nome.isNotEmpty() && email.isNotEmpty() && senha.isNotEmpty() && dataNascimento.length == 8) {
                         carregando = true
 
                         // 1. Criar usuário no Firebase Auth
@@ -101,11 +128,14 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
                             .addOnSuccessListener { resultado ->
                                 val userId = resultado.user?.uid
 
+                                // Formata a data de volta para "DD/MM/AAAA" para salvar bonitinho no banco de dados
+                                val dataNascimentoFormatada = "${dataNascimento.substring(0, 2)}/${dataNascimento.substring(2, 4)}/${dataNascimento.substring(4, 8)}"
+
                                 // 2. Salvar dados extras no Firestore
                                 val usuarioMap = hashMapOf(
                                     "nome" to nome,
                                     "email" to email,
-                                    "dataNascimento" to dataNascimento,
+                                    "dataNascimento" to dataNascimentoFormatada,
                                     "uid" to userId
                                 )
 
@@ -126,7 +156,12 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
                                 Toast.makeText(context, "Erro no Auth: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
                     } else {
-                        Toast.makeText(context, "Preencha todos os campos!", Toast.LENGTH_SHORT).show()
+                        // Avisos específicos para orientar o usuário
+                        if (dataNascimento.length in 1..7) {
+                            Toast.makeText(context, "Digite a data de nascimento completa!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Preencha todos os campos!", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
@@ -139,15 +174,23 @@ fun RegistroScreen(onBackClick: () -> Unit, onRegistroSuccess: () -> Unit) {
     }
 }
 
-// Componente auxiliar para não repetir código
+// Componente atualizado para aceitar VisualTransformation e KeyboardOptions
 @Composable
-fun CampoRegistro(label: String, value: String, onValueChange: (String) -> Unit) {
+fun CampoRegistro(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
     Text(label, color = Color.White, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp).fillMaxWidth())
     TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(25.dp),
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
         colors = TextFieldDefaults.colors(
             focusedContainerColor = SurfaceGray,
             unfocusedContainerColor = SurfaceGray,
@@ -156,4 +199,34 @@ fun CampoRegistro(label: String, value: String, onValueChange: (String) -> Unit)
             focusedTextColor = Color.White
         )
     )
+}
+
+// Lógica de Máscara de Data para o Compose
+class DateVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val trimmed = if (text.text.length >= 8) text.text.substring(0..7) else text.text
+        var out = ""
+        for (i in trimmed.indices) {
+            out += trimmed[i]
+            if (i == 1 || i == 3) out += "/"
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 1) return offset
+                if (offset <= 3) return offset + 1
+                if (offset <= 8) return offset + 2
+                return 10
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 2) return offset
+                if (offset <= 5) return offset - 1
+                if (offset <= 10) return offset - 2
+                return 8
+            }
+        }
+
+        return TransformedText(AnnotatedString(out), offsetMapping)
+    }
 }

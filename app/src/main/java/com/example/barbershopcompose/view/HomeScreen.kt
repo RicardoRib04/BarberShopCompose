@@ -1,7 +1,6 @@
 package com.example.barbershopcompose.view
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,12 +34,10 @@ fun HomeScreen(
     onMenuClick: () -> Unit,
     onAgendamentosClick: () -> Unit
 ) {
-    // --- LÓGICA DE DADOS REAIS ---
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
-    var nomeUsuario by remember { mutableStateOf("...") } // Estado para o nome real
+    var nomeUsuario by remember { mutableStateOf("...") }
 
-    // Busca o nome no Firestore assim que a tela inicia
     LaunchedEffect(Unit) {
         val uid = auth.currentUser?.uid
         if (uid != null) {
@@ -62,6 +59,10 @@ fun HomeScreen(
     )
 
     var searchTexto by remember { mutableStateOf("") }
+
+    val servicosFiltrados = listaServicos.filter {
+        it.nome.contains(searchTexto, ignoreCase = true)
+    }
 
     Scaffold(
         bottomBar = {
@@ -110,7 +111,6 @@ fun HomeScreen(
                 Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
             }
 
-            // MUDANÇA AQUI: Agora usa a variável dinâmica
             Text("Bem vindo, $nomeUsuario", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -141,7 +141,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(listaServicos) { servico ->
+                items(servicosFiltrados) { servico ->
                     ServicoCard(
                         servico = servico,
                         onAgendarClick = { onAgendarClick(servico.nome) }

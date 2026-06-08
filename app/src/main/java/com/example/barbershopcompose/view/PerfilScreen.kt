@@ -35,20 +35,19 @@ import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+// ADICIONAMOS O onLogoutClick AQUI EM CIMA
 @Composable
-fun PerfilScreen(onBackClick: () -> Unit) {
+fun PerfilScreen(onBackClick: () -> Unit, onLogoutClick: () -> Unit) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val uid = auth.currentUser?.uid
 
-    // Estados dinâmicos
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var dataNascimento by remember { mutableStateOf("") }
     var carregando by remember { mutableStateOf(true) }
 
-    // Busca dados reais ao carregar a tela
     LaunchedEffect(Unit) {
         if (uid != null) {
             db.collection("usuarios").document(uid).get()
@@ -75,7 +74,6 @@ fun PerfilScreen(onBackClick: () -> Unit) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // TOP BAR
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -102,7 +100,6 @@ fun PerfilScreen(onBackClick: () -> Unit) {
                 CircularProgressIndicator(color = PrimaryBlue)
             }
         } else {
-            // FOTO DE PERFIL GRANDE
             Image(
                 painter = painterResource(id = R.drawable.fotoperfil),
                 contentDescription = "Foto de Perfil Grande",
@@ -115,7 +112,6 @@ fun PerfilScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // CAMPOS DE EDIÇÃO
             FigmaEditField(
                 label = "Nome Completo:",
                 value = nome,
@@ -126,8 +122,8 @@ fun PerfilScreen(onBackClick: () -> Unit) {
             FigmaEditField(
                 label = "Email:",
                 value = email,
-                onValueChange = { /* E-mail fixo por segurança */ },
-                icon = { /* Campo apenas leitura */ }
+                onValueChange = { },
+                icon = { }
             )
 
             FigmaEditField(
@@ -139,7 +135,6 @@ fun PerfilScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // BOTÃO SALVAR
             Button(
                 onClick = {
                     if (uid != null) {
@@ -166,11 +161,11 @@ fun PerfilScreen(onBackClick: () -> Unit) {
                 Text("SALVAR", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
-            // BOTÃO DE LOGOUT
+            // MUDANÇA AQUI NO BOTÃO DE LOGOUT
             TextButton(
                 onClick = {
                     auth.signOut()
-                    onBackClick() // Volta para a tela de login
+                    onLogoutClick() // Chama a função de deslogar em vez de apenas voltar
                 },
                 modifier = Modifier.padding(top = 8.dp)
             ) {
@@ -180,7 +175,6 @@ fun PerfilScreen(onBackClick: () -> Unit) {
     }
 }
 
-// COMPONENTE AUXILIAR (FORA DA FUNÇÃO PRINCIPAL)
 @Composable
 fun FigmaEditField(
     label: String,
