@@ -1,7 +1,6 @@
 package com.example.barbershopcompose.view
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,7 +26,6 @@ import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.SurfaceGray
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch // Importante para abrir e fechar o menu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,11 +38,6 @@ fun HomeScreen(
     val db = FirebaseFirestore.getInstance()
     var nomeUsuario by remember { mutableStateOf("...") }
 
-    // --- ESTADOS DO MENU LATERAL (DRAWER) ---
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
-    // Busca o nome no Firestore assim que a tela inicia
     LaunchedEffect(Unit) {
         val uid = auth.currentUser?.uid
         if (uid != null) {
@@ -67,152 +60,92 @@ fun HomeScreen(
 
     var searchTexto by remember { mutableStateOf("") }
 
-    // MUDANÇA: Envolver o Scaffold com ModalNavigationDrawer para criar o Menu Lateral
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = SurfaceGray, // Usando a cor cinza do seu tema
-                modifier = Modifier.width(280.dp)
-            ) {
-                Spacer(Modifier.height(24.dp))
+    val servicosFiltrados = listaServicos.filter {
+        it.nome.contains(searchTexto, ignoreCase = true)
+    }
 
-                // Cabeçalho do Menu Lateral
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.fotoperfil),
-                        contentDescription = "Perfil",
-                        modifier = Modifier.size(80.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(nomeUsuario, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(auth.currentUser?.email ?: "", color = Color.LightGray, fontSize = 14.sp)
-                }
-
-                HorizontalDivider(color = Color.DarkGray, thickness = 1.dp)
-
-                Spacer(Modifier.height(16.dp))
-
-                // Opção 1: Meu Perfil
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.White) },
-                    label = { Text("Meu Perfil", color = Color.White, fontSize = 16.sp) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() } // Fecha o menu lateral
-                        onMenuClick() // Navega para a tela de Perfil
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+    Scaffold(
+        bottomBar = {
+            NavigationBar(containerColor = SurfaceGray) {
+                NavigationBarItem(
+                    selected = true,
+                    onClick = { /* Início */ },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color.White) },
+                    label = { Text("Início", color = Color.White) }
                 )
-
-                Spacer(Modifier.height(8.dp))
-
-                // Opção 2: Meus Agendamentos
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.White) },
-                    label = { Text("Meus Agendamentos", color = Color.White, fontSize = 16.sp) },
+                NavigationBarItem(
                     selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() } // Fecha o menu lateral
-                        onAgendamentosClick() // Navega para a tela de Agendamentos
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                    onClick = onAgendamentosClick,
+                    icon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray) },
+                    label = { Text("Agendamentos", color = Color.Gray) }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onMenuClick,
+                    icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
+                    label = { Text("Menu", color = Color.Gray) }
                 )
             }
-        }
-    ) {
-        // Todo o seu código original continua aqui dentro do Scaffold
-        Scaffold(
-            bottomBar = {
-                NavigationBar(containerColor = SurfaceGray) {
-                    NavigationBarItem(
-                        selected = true,
-                        onClick = { /* Início */ },
-                        icon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color.White) },
-                        label = { Text("Início", color = Color.White) }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = onAgendamentosClick,
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray) },
-                        label = { Text("Agendamentos", color = Color.Gray) }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = onMenuClick,
-                        icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
-                        label = { Text("Menu", color = Color.Gray) }
-                    )
-                }
-            },
-            containerColor = BackgroundBlack
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+        },
+        containerColor = BackgroundBlack
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.fotoperfil),
-                        contentDescription = "Perfil",
-                        modifier = Modifier.size(45.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text("BARBERSHOP", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-
-                    // MUDANÇA AQUI: Transformamos o ícone em um botão funcional!
-                    IconButton(
-                        onClick = { scope.launch { drawerState.open() } }, // Ação de abrir o Menu Lateral
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu Lateral", tint = Color.White, modifier = Modifier.fillMaxSize())
-                    }
-                }
-
-                Text("Bem vindo, $nomeUsuario", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Barra de Pesquisa
-                TextField(
-                    value = searchTexto,
-                    onValueChange = { searchTexto = it },
-                    placeholder = { Text("Pesquisar serviços", color = Color.Gray) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = SurfaceGray,
-                        unfocusedContainerColor = SurfaceGray,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
+                Image(
+                    painter = painterResource(id = R.drawable.fotoperfil),
+                    contentDescription = "Perfil",
+                    modifier = Modifier.size(45.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
+                Text("BARBERSHOP", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Text("Bem vindo, $nomeUsuario", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
-                Text("Todos os serviços", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(listaServicos) { servico ->
-                        ServicoCard(
-                            servico = servico,
-                            onAgendarClick = { onAgendarClick(servico.nome) }
-                        )
-                    }
+            // Barra de Pesquisa
+            TextField(
+                value = searchTexto,
+                onValueChange = { searchTexto = it },
+                placeholder = { Text("Pesquisar serviços", color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = SurfaceGray,
+                    unfocusedContainerColor = SurfaceGray,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Todos os serviços", color = Color.White, fontWeight = FontWeight.SemiBold)
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(servicosFiltrados) { servico ->
+                    ServicoCard(
+                        servico = servico,
+                        onAgendarClick = { onAgendarClick(servico.nome) }
+                    )
                 }
             }
         }
