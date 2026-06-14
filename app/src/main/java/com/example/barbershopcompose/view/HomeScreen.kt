@@ -101,12 +101,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.fotoperfil),
-                    contentDescription = "Perfil",
-                    modifier = Modifier.size(45.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
                 Text("BARBERSHOP", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
             }
