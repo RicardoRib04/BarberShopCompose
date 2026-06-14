@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.example.barbershopcompose.model.Profissional
 
 // E-mail do administrador (o barbeiro)
 const val EMAIL_ADMIN = "admin@barberflow.com"
@@ -101,4 +102,39 @@ fun buscarHorariosOcupados(
             onResultado(ocupados)
         }
         .addOnFailureListener { onResultado(emptyList()) }
+}
+
+
+// --- CRUD DE PROFISSIONAIS ---
+
+fun adicionarProfissional(profissional: Profissional, onSucesso: () -> Unit, onErro: (String) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val ref = db.collection("profissionais").document()
+    val novoProfissional = profissional.copy(id = ref.id)
+    ref.set(novoProfissional)
+        .addOnSuccessListener { onSucesso() }
+        .addOnFailureListener { e -> onErro(e.message ?: "Erro ao adicionar") }
+}
+
+fun buscarProfissionais(onResultado: (List<Profissional>) -> Unit) {
+    FirebaseFirestore.getInstance().collection("profissionais").get()
+        .addOnSuccessListener { snapshot ->
+            val lista = snapshot.documents.mapNotNull { it.toObject(Profissional::class.java) }
+            onResultado(lista)
+        }
+        .addOnFailureListener { onResultado(emptyList()) }
+}
+
+fun atualizarProfissional(profissional: Profissional, onSucesso: () -> Unit, onErro: (String) -> Unit) {
+    FirebaseFirestore.getInstance().collection("profissionais").document(profissional.id)
+        .set(profissional)
+        .addOnSuccessListener { onSucesso() }
+        .addOnFailureListener { e -> onErro(e.message ?: "Erro ao atualizar") }
+}
+
+fun deletarProfissional(id: String, onSucesso: () -> Unit, onErro: (String) -> Unit) {
+    FirebaseFirestore.getInstance().collection("profissionais").document(id)
+        .delete()
+        .addOnSuccessListener { onSucesso() }
+        .addOnFailureListener { e -> onErro(e.message ?: "Erro ao deletar") }
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.barbershopcompose.R
 import com.example.barbershopcompose.data.buscarHorariosOcupados
 import com.example.barbershopcompose.data.salvarAgendamentoReal
+import com.example.barbershopcompose.model.Profissional
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.example.barbershopcompose.ui.theme.SurfaceGray
@@ -52,21 +53,29 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
     val dataFormatada = "$dia/${mes + 1}/$ano"
 
     // --- ESTADOS DE PROFISSIONAL E HORÁRIO ---
-    val barbeiros = listOf(
-        Pair("Ricardinho", R.drawable.fotoperfil),
-        Pair("Oliveira", R.drawable.bigode),
-        Pair("Ribeiro", R.drawable.tesoura)
-    )
-    var barbeiroSelecionado by remember { mutableStateOf(barbeiros[0]) }
+    var barbeiros by remember { mutableStateOf<List<Profissional>>(emptyList()) }
+    var barbeiroSelecionado by remember { mutableStateOf<Profissional?>(null) }
     var horarioSelecionado by remember { mutableStateOf("") }
-
-    // Lista para controlar visualmente o que já está reservado
     var horariosOcupados by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Busca no Firebase ao abrir a tela
+    LaunchedEffect(Unit) {
+        com.example.barbershopcompose.data.buscarProfissionais { lista ->
+            barbeiros = lista
+            if (lista.isNotEmpty()) {
+                barbeiroSelecionado = lista[0]
+            }
+        }
+    }
 
     // Efeito para buscar horários ocupados sempre que mudar o barbeiro ou a data
     LaunchedEffect(barbeiroSelecionado, dataFormatada) {
-        buscarHorariosOcupados(barbeiroSelecionado.first, dataFormatada) { lista ->
-            horariosOcupados = lista
+        barbeiroSelecionado?.let { prof ->
+            buscarHorariosOcupados(prof.nome, dataFormatada) { lista ->
+                horariosOcupados = lista
+            }
+        } ?: run {
+            horariosOcupados = emptyList() // Limpa se não houver barbeiro
         }
     }
 
@@ -94,7 +103,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
                 Button(
                     onClick = {
                         salvarAgendamentoReal(
-                            profissional = barbeiroSelecionado.first,
+                            profissional = barbeiroSelecionado?.nome ?: "",
                             data = dataFormatada,
                             horario = horarioSelecionado,
                             servico = servicoEscolhido,
@@ -121,7 +130,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             text = {
                 Column {
                     Text("Serviço: $servicoEscolhido", color = Color.White)
-                    Text("Profissional: ${barbeiroSelecionado.first}", color = Color.White)
+                    Text("Profissional: ${barbeiroSelecionado?.nome ?: ""}", color = Color.White)
                     Text("Data: $dataFormatada", color = Color.White)
                     Text("Horário: $horarioSelecionado", color = Color.White)
                 }
@@ -181,7 +190,8 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
                     }
                 ) {
                     Image(
-                        painter = painterResource(id = barbeiro.second),
+                        // Imagem padrão pois agora o objeto vem do Firebase
+                        painter = painterResource(id = R.drawable.fotoperfil),
                         contentDescription = null,
                         modifier = Modifier
                             .size(70.dp)
@@ -189,7 +199,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
                             .border(if (selecionado) 3.dp else 0.dp, PrimaryBlue, CircleShape),
                         contentScale = ContentScale.Crop
                     )
-                    Text(barbeiro.first, color = if (selecionado) PrimaryBlue else Color.White)
+                    Text(barbeiro.nome, color = if (selecionado) PrimaryBlue else Color.White)
                 }
             }
         }

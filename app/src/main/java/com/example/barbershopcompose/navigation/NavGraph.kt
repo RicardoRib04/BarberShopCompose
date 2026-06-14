@@ -12,6 +12,7 @@ import com.example.barbershopcompose.view.AgendamentoScreen
 import com.example.barbershopcompose.view.PerfilScreen
 import com.example.barbershopcompose.view.AgendamentosConfirmadosScreen
 import com.example.barbershopcompose.view.RegistroScreen
+import com.example.barbershopcompose.view.GerenciarProfissionaisScreen
 
 @Composable
 fun SetupNavGraph() {
@@ -68,22 +69,29 @@ fun SetupNavGraph() {
             )
         }
 
-        // --- MUDANÇA AQUI: TELA DE PERFIL ---
         composable("perfil") {
             PerfilScreen(
                 onBackClick = { navController.popBackStack() },
                 onLogoutClick = {
-                    // Quando deslogar, navega para o login e zera todo o histórico de telas
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
+                },
+                onGerenciarProfissionaisClick = {
+                    navController.navigate("gerenciar_profissionais")
                 }
             )
         }
 
         composable("meus_agendamentos") {
             AgendamentosConfirmadosScreen(onBackClick = { navController.popBackStack() })
+        }
+
+        composable("gerenciar_profissionais") {
+            GerenciarProfissionaisScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }

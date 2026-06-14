@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,13 +34,20 @@ import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-// ADICIONAMOS O onLogoutClick AQUI EM CIMA
 @Composable
-fun PerfilScreen(onBackClick: () -> Unit, onLogoutClick: () -> Unit) {
+fun PerfilScreen(
+    onBackClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onGerenciarProfissionaisClick: () -> Unit // <-- Novo parâmetro de navegação
+) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
-    val uid = auth.currentUser?.uid
+    val currentUser = auth.currentUser
+    val uid = currentUser?.uid
+
+    // Verifica se o usuário logado é o admin
+    val isAdmin = currentUser?.email == "admin@barberflow.com"
 
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -135,6 +141,21 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogoutClick: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // --- BOTÃO EXCLUSIVO DO ADMIN PARA O CRUD ---
+            if (isAdmin) {
+                Button(
+                    onClick = onGerenciarProfissionaisClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(vertical = 4.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A8BFF)), // LightBlue
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("GERENCIAR PROFISSIONAIS (ADMIN)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+
             Button(
                 onClick = {
                     if (uid != null) {
@@ -161,11 +182,10 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogoutClick: () -> Unit) {
                 Text("SALVAR", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
-            // MUDANÇA AQUI NO BOTÃO DE LOGOUT
             TextButton(
                 onClick = {
                     auth.signOut()
-                    onLogoutClick() // Chama a função de deslogar em vez de apenas voltar
+                    onLogoutClick()
                 },
                 modifier = Modifier.padding(top = 8.dp)
             ) {
