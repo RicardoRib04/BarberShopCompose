@@ -2,7 +2,6 @@ package com.example.barbershopcompose.view
 
 import android.app.DatePickerDialog
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,7 +11,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -23,15 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.barbershopcompose.R
 import com.example.barbershopcompose.data.buscarHorariosOcupados
 import com.example.barbershopcompose.data.salvarAgendamentoReal
 import com.example.barbershopcompose.model.Profissional
@@ -182,24 +177,24 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(barbeiros) { barbeiro ->
                 val selecionado = barbeiroSelecionado == barbeiro
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable {
-                        barbeiroSelecionado = barbeiro
-                        horarioSelecionado = ""
-                    }
+
+                // Substituição da foto por um "Chip" com o nome do barbeiro
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selecionado) PrimaryBlue else Color.DarkGray)
+                        .clickable {
+                            barbeiroSelecionado = barbeiro
+                            horarioSelecionado = ""
+                        }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        // Imagem padrão pois agora o objeto vem do Firebase
-                        painter = painterResource(id = R.drawable.fotoperfil),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clip(CircleShape)
-                            .border(if (selecionado) 3.dp else 0.dp, PrimaryBlue, CircleShape),
-                        contentScale = ContentScale.Crop
+                    Text(
+                        text = barbeiro.nome,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
-                    Text(barbeiro.nome, color = if (selecionado) PrimaryBlue else Color.White)
                 }
             }
         }

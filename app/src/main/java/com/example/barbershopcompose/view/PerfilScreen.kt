@@ -1,12 +1,9 @@
 package com.example.barbershopcompose.view
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -19,16 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.barbershopcompose.R
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.google.firebase.auth.FirebaseAuth
@@ -38,7 +31,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun PerfilScreen(
     onBackClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onGerenciarProfissionaisClick: () -> Unit // <-- Novo parâmetro de navegação
+    onGerenciarProfissionaisClick: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -50,7 +43,7 @@ fun PerfilScreen(
     val isAdmin = currentUser?.email == "admin@barberflow.com"
 
     var nome by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(currentUser?.email ?: "") }
     var dataNascimento by remember { mutableStateOf("") }
     var carregando by remember { mutableStateOf(true) }
 
@@ -60,7 +53,12 @@ fun PerfilScreen(
                 .addOnSuccessListener { document ->
                     if (document.exists()) {
                         nome = document.getString("nome") ?: ""
-                        email = document.getString("email") ?: ""
+
+                        val emailBanco = document.getString("email")
+                        if (!emailBanco.isNullOrEmpty()) {
+                            email = emailBanco
+                        }
+
                         dataNascimento = document.getString("dataNascimento") ?: ""
                     }
                     carregando = false
@@ -89,13 +87,7 @@ fun PerfilScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Image(
-                    painter = painterResource(id = R.drawable.fotoperfil),
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                // Foto pequena removida daqui
             }
             Text("Editar Perfil", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White)
@@ -106,17 +98,10 @@ fun PerfilScreen(
                 CircularProgressIndicator(color = PrimaryBlue)
             }
         } else {
-            Image(
-                painter = painterResource(id = R.drawable.fotoperfil),
-                contentDescription = "Foto de Perfil Grande",
-                modifier = Modifier
-                    .size(150.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, PrimaryBlue, CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            // Foto grande centralizada removida daqui
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Mantendo um pequeno espaçamento no topo
+            Spacer(modifier = Modifier.height(16.dp))
 
             FigmaEditField(
                 label = "Nome Completo:",
@@ -161,9 +146,11 @@ fun PerfilScreen(
                     if (uid != null) {
                         val updates = hashMapOf<String, Any>(
                             "nome" to nome,
+                            "email" to email,
                             "dataNascimento" to dataNascimento
                         )
-                        db.collection("usuarios").document(uid).update(updates)
+
+                        db.collection("usuarios").document(uid).set(updates, com.google.firebase.firestore.SetOptions.merge())
                             .addOnSuccessListener {
                                 Toast.makeText(context, "Dados atualizados!", Toast.LENGTH_SHORT).show()
                             }
