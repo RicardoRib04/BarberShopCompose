@@ -3,7 +3,6 @@ package com.example.barbershopcompose.view
 import android.app.DatePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -28,6 +27,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.barbershopcompose.data.buscarHorariosOcupados
+import com.example.barbershopcompose.data.buscarProfissionais
 import com.example.barbershopcompose.data.salvarAgendamentoReal
 import com.example.barbershopcompose.model.Profissional
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
@@ -55,7 +55,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
 
     // Busca no Firebase ao abrir a tela
     LaunchedEffect(Unit) {
-        com.example.barbershopcompose.data.buscarProfissionais { lista ->
+        buscarProfissionais { lista ->
             barbeiros = lista
             if (lista.isNotEmpty()) {
                 barbeiroSelecionado = lista[0]

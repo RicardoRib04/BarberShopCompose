@@ -1,7 +1,6 @@
 package com.example.barbershopcompose.view
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,15 +18,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.barbershopcompose.R
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.example.barbershopcompose.ui.theme.SurfaceGray
@@ -54,22 +49,32 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
     var novoHorario by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        db.collection("agendamentos_teste")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
+        val queryBase = db.collection("agendamentos_teste")
 
-                if (snapshot != null) {
-                    val agendamentos = snapshot.documents.map { doc ->
-                        val data = doc.data ?: emptyMap()
-                        data.toMutableMap().apply { put("id", doc.id) }
-                    }
+        val queryFiltrada = if (isAdmin) {
+            queryBase.orderBy("timestamp", Query.Direction.DESCENDING)
+        } else {
+            queryBase.whereEqualTo("emailCliente", currentUser?.email ?: "")
+        }
+
+        queryFiltrada.addSnapshotListener { snapshot, error ->
+            if (error != null) return@addSnapshotListener
+
+            if (snapshot != null) {
+                val agendamentos = snapshot.documents.map { doc ->
+                    val data = doc.data ?: emptyMap()
+                    data.toMutableMap().apply { put("id", doc.id) }
+                }
+
+                if (!isAdmin) {
+                    listaAgendamentos = agendamentos.sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                } else {
                     listaAgendamentos = agendamentos
                 }
             }
+        }
     }
 
-    // Configuração dos Pickers Nativos do Android
     val calendar = Calendar.getInstance()
 
     val datePickerDialog = android.app.DatePickerDialog(
@@ -93,7 +98,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
         },
         calendar.get(Calendar.HOUR_OF_DAY),
         calendar.get(Calendar.MINUTE),
-        true // true = Formato 24h
+        true
     )
 
     if (showEditDialog && agendamentoSendoEditado != null) {
@@ -106,7 +111,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                     OutlinedTextField(
                         value = novaData,
                         onValueChange = { },
-                        readOnly = true, // Impede o teclado de abrir
+                        readOnly = true,
                         label = { Text("Data", color = Color.LightGray) },
                         trailingIcon = {
                             IconButton(onClick = { datePickerDialog.show() }) {
@@ -127,7 +132,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                     OutlinedTextField(
                         value = novoHorario,
                         onValueChange = { },
-                        readOnly = true, // Impede o teclado de abrir
+                        readOnly = true,
                         label = { Text("Horário", color = Color.LightGray) },
                         trailingIcon = {
                             IconButton(onClick = { timePickerDialog.show() }) {
@@ -151,7 +156,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                         db.collection("agendamentos_teste").document(id)
                             .update(
                                 mapOf(
-                                    "data" to novaData,
+                                    "com/example/barbershopcompose/data" to novaData,
                                     "horario" to novoHorario
                                 )
                             ).addOnSuccessListener {
@@ -189,13 +194,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                 }
-                Image(
-                    painter = painterResource(id = R.drawable.fotoperfil),
-                    contentDescription = null,
-                    modifier = Modifier.size(45.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Agendamentos", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
             Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
@@ -208,7 +207,7 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(listaAgendamentos) { agendamento ->
                 val id = agendamento["id"] as? String ?: ""
-                val dataStr = agendamento["data"] as? String ?: ""
+                val dataStr = agendamento["com/example/barbershopcompose/data"] as? String ?: ""
                 val partesData = dataStr.split("/")
                 val dia = partesData.getOrNull(0) ?: "--"
                 val mesNum = partesData.getOrNull(1) ?: "1"
@@ -217,7 +216,8 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                 val profissionalNome = agendamento["profissional"] as? String ?: "Profissional"
                 val horario = agendamento["horario"] as? String ?: "--:--"
 
-                val fotoCorreta = obterFotoProfissional(profissionalNome)
+                // Resgata o e-mail do cliente do Firebase
+                val emailCliente = agendamento["emailCliente"] as? String ?: "Email desconhecido"
 
                 CardAgendamentoFigma(
                     id = id,
@@ -226,9 +226,9 @@ fun AgendamentosConfirmadosScreen(onBackClick: () -> Unit) {
                     servico = servico,
                     preco = "R$ 50,00",
                     horario = horario,
-                    fotoProfissional = fotoCorreta,
                     nomeProfissional = profissionalNome,
                     isAdmin = isAdmin,
+                    emailCliente = emailCliente, // Passa o e-mail para o Card
                     onEditClick = {
                         agendamentoSendoEditado = agendamento
                         novaData = dataStr
@@ -259,9 +259,9 @@ fun CardAgendamentoFigma(
     servico: String,
     preco: String,
     horario: String,
-    fotoProfissional: Int,
     nomeProfissional: String,
     isAdmin: Boolean,
+    emailCliente: String, // Novo parâmetro recebendo o e-mail
     onEditClick: () -> Unit,
     onDeleteClick: (String) -> Unit
 ) {
@@ -275,14 +275,18 @@ fun CardAgendamentoFigma(
         Column(modifier = Modifier.weight(1f)) {
             Text(servico, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-                Image(
-                    painter = painterResource(id = fotoProfissional),
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
+            // Se for Admin, mostra o e-mail do cliente abaixo do serviço
+            if (isAdmin) {
+                Text(
+                    text = "Cliente: $emailCliente",
+                    color = Color.Yellow,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                 Text(nomeProfissional, color = Color.LightGray, fontSize = 14.sp)
             }
 
@@ -337,14 +341,5 @@ fun abreviarMes(mes: String): String {
         "11" -> "NOV"
         "12" -> "DEZ"
         else -> "MÊS"
-    }
-}
-
-fun obterFotoProfissional(nome: String): Int {
-    return when (nome) {
-        "Oliveira" -> R.drawable.bigode
-        "Ribeiro" -> R.drawable.tesoura
-        "Ricardinho" -> R.drawable.fotoperfil
-        else -> R.drawable.fotoperfil
     }
 }

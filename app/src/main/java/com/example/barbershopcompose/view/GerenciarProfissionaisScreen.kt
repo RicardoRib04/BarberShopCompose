@@ -19,25 +19,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.barbershopcompose.data.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.barbershopcompose.model.Profissional
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.example.barbershopcompose.ui.theme.SurfaceGray
+import com.example.barbershopcompose.viewmodel.ProfissionaisViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GerenciarProfissionaisScreen(onBackClick: () -> Unit) {
+fun GerenciarProfissionaisScreen(
+    onBackClick: () -> Unit,
+    viewModel: ProfissionaisViewModel = hiltViewModel() // Injeção mágica do Hilt
+) {
     val context = LocalContext.current
-    var lista by remember { mutableStateOf<List<Profissional>>(emptyList()) }
+
+    // A lista agora observa o ViewModel automaticamente!
+    val lista by viewModel.profissionais.collectAsState()
+
     var nomeInput by remember { mutableStateOf("") }
     var profissionalEditando by remember { mutableStateOf<Profissional?>(null) }
-
-    fun carregarProfissionais() {
-        buscarProfissionais { lista = it }
-    }
-
-    LaunchedEffect(Unit) { carregarProfissionais() }
 
     Column(modifier = Modifier.fillMaxSize().background(BackgroundBlack).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)) {
@@ -60,15 +61,24 @@ fun GerenciarProfissionaisScreen(onBackClick: () -> Unit) {
             onClick = {
                 if (nomeInput.isNotBlank()) {
                     if (profissionalEditando == null) {
-                        adicionarProfissional(Profissional(nome = nomeInput), {
-                            nomeInput = ""; carregarProfissionais()
-                            Toast.makeText(context, "Adicionado!", Toast.LENGTH_SHORT).show()
-                        }, {})
+                        viewModel.adicionarProfissional(
+                            profissional = Profissional(nome = nomeInput),
+                            onSucesso = {
+                                nomeInput = ""
+                                Toast.makeText(context, "Adicionado!", Toast.LENGTH_SHORT).show()
+                            },
+                            onErro = { erro -> Toast.makeText(context, erro, Toast.LENGTH_SHORT).show() }
+                        )
                     } else {
-                        atualizarProfissional(profissionalEditando!!.copy(nome = nomeInput), {
-                            nomeInput = ""; profissionalEditando = null; carregarProfissionais()
-                            Toast.makeText(context, "Atualizado!", Toast.LENGTH_SHORT).show()
-                        }, {})
+                        viewModel.atualizarProfissional(
+                            profissional = profissionalEditando!!.copy(nome = nomeInput),
+                            onSucesso = {
+                                nomeInput = ""
+                                profissionalEditando = null
+                                Toast.makeText(context, "Atualizado!", Toast.LENGTH_SHORT).show()
+                            },
+                            onErro = { erro -> Toast.makeText(context, erro, Toast.LENGTH_SHORT).show() }
+                        )
                     }
                 }
             },
@@ -94,10 +104,13 @@ fun GerenciarProfissionaisScreen(onBackClick: () -> Unit) {
                             Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.Yellow)
                         }
                         IconButton(onClick = {
-                            deletarProfissional(prof.id, {
-                                carregarProfissionais()
-                                Toast.makeText(context, "Deletado!", Toast.LENGTH_SHORT).show()
-                            }, {})
+                            viewModel.deletarProfissional(
+                                id = prof.id,
+                                onSucesso = {
+                                    Toast.makeText(context, "Deletado!", Toast.LENGTH_SHORT).show()
+                                },
+                                onErro = { erro -> Toast.makeText(context, erro, Toast.LENGTH_SHORT).show() }
+                            )
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = "Deletar", tint = Color.Red)
                         }
