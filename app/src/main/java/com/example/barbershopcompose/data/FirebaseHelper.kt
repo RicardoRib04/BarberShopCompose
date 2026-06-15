@@ -28,7 +28,7 @@ fun salvarAgendamentoReal(
 
     colecao
         .whereEqualTo("profissional", profissional)
-        .whereEqualTo("data", data)
+        .whereEqualTo("com/example/barbershopcompose/data", data)
         .whereEqualTo("horario", horario)
         .get()
         .addOnSuccessListener { querySnapshot ->
@@ -38,7 +38,7 @@ fun salvarAgendamentoReal(
                     "cliente" to "Cliente Padrão",
                     "profissional" to profissional,
                     "servico" to servico,
-                    "data" to data,
+                    "com/example/barbershopcompose/data" to data,
                     "horario" to horario,
                     "timestamp" to System.currentTimeMillis()
                 )
@@ -95,7 +95,7 @@ fun buscarHorariosOcupados(
 ) {
     FirebaseFirestore.getInstance().collection("agendamentos_teste")
         .whereEqualTo("profissional", profissional)
-        .whereEqualTo("data", data)
+        .whereEqualTo("com/example/barbershopcompose/data", data)
         .get()
         .addOnSuccessListener { snapshot ->
             val ocupados = snapshot.documents.map { it.getString("horario") ?: "" }
