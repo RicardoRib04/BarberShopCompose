@@ -17,28 +17,30 @@ fun salvarAgendamentoReal(
     data: String,
     horario: String,
     servico: String,
+    emailClienteManual: String? = null, // <--- NOVO PARÂMETRO
     onSucesso: () -> Unit,
     onErro: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     val colecao = db.collection("agendamentos_teste")
 
-    // Pega o e-mail exato do usuário que está logado no momento do agendamento
-    val emailAtual = FirebaseAuth.getInstance().currentUser?.email ?: "sem_email"
+    // Define qual e-mail vai para o banco
+    val emailLogado = FirebaseAuth.getInstance().currentUser?.email ?: "sem_email"
+    val emailDefinitivo = if (!emailClienteManual.isNullOrBlank()) emailClienteManual.trim() else emailLogado
 
     colecao
         .whereEqualTo("profissional", profissional)
-        .whereEqualTo("com/example/barbershopcompose/data", data)
+        .whereEqualTo("data", data)
         .whereEqualTo("horario", horario)
         .get()
         .addOnSuccessListener { querySnapshot ->
             if (querySnapshot.isEmpty) {
                 val agendamento = hashMapOf(
-                    "emailCliente" to emailAtual, // SALVA O E-MAIL COMO IDENTIFICADOR ÚNICO
+                    "emailCliente" to emailDefinitivo, // Usa o e-mail customizado se houver
                     "cliente" to "Cliente Padrão",
                     "profissional" to profissional,
                     "servico" to servico,
-                    "com/example/barbershopcompose/data" to data,
+                    "data" to data,
                     "horario" to horario,
                     "timestamp" to System.currentTimeMillis()
                 )
@@ -56,9 +58,6 @@ fun salvarAgendamentoReal(
         .addOnFailureListener { e -> onErro("Erro no banco: ${e.message}") }
 }
 
-/**
- * Busca a lista de agendamentos filtrando pelo E-MAIL
- */
 fun buscarAgendamentos(
     emailLogado: String,
     onResultado: (List<Map<String, Any>>) -> Unit
@@ -66,7 +65,6 @@ fun buscarAgendamentos(
     val queryBase = FirebaseFirestore.getInstance().collection("agendamentos_teste")
 
     if (emailLogado == EMAIL_ADMIN) {
-        // ADMIN: Puxa todos os agendamentos do banco
         queryBase.orderBy("timestamp", Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { resultado ->
@@ -74,7 +72,6 @@ fun buscarAgendamentos(
                 onResultado(lista)
             }
     } else {
-        // CLIENTE: Puxa APENAS os agendamentos que contêm o e-mail dele
         queryBase.whereEqualTo("emailCliente", emailLogado)
             .get()
             .addOnSuccessListener { resultado ->
@@ -85,9 +82,6 @@ fun buscarAgendamentos(
     }
 }
 
-/**
- * Busca horários ocupados para bloquear os botões na tela
- */
 fun buscarHorariosOcupados(
     profissional: String,
     data: String,
@@ -95,7 +89,7 @@ fun buscarHorariosOcupados(
 ) {
     FirebaseFirestore.getInstance().collection("agendamentos_teste")
         .whereEqualTo("profissional", profissional)
-        .whereEqualTo("com/example/barbershopcompose/data", data)
+        .whereEqualTo("data", data)
         .get()
         .addOnSuccessListener { snapshot ->
             val ocupados = snapshot.documents.map { it.getString("horario") ?: "" }
@@ -103,7 +97,6 @@ fun buscarHorariosOcupados(
         }
         .addOnFailureListener { onResultado(emptyList()) }
 }
-
 
 // --- CRUD DE PROFISSIONAIS ---
 
