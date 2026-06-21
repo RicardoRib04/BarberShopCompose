@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.barbershopcompose.data.EMAIL_ADMIN
 import com.example.barbershopcompose.data.buscarHorariosOcupados
 import com.example.barbershopcompose.data.buscarProfissionais
 import com.example.barbershopcompose.data.salvarAgendamentoReal
@@ -33,6 +34,7 @@ import com.example.barbershopcompose.model.Profissional
 import com.example.barbershopcompose.ui.theme.BackgroundBlack
 import com.example.barbershopcompose.ui.theme.PrimaryBlue
 import com.example.barbershopcompose.ui.theme.SurfaceGray
+import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 
 @Composable
@@ -40,6 +42,10 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
+    val auth = FirebaseAuth.getInstance()
+
+    // Verifica se quem está agendando é o Admin
+    val isAdmin = auth.currentUser?.email == EMAIL_ADMIN
 
     // --- ESTADOS DE DATA ---
     var dia by remember { mutableIntStateOf(calendar.get(Calendar.DAY_OF_MONTH)) }
@@ -47,13 +53,13 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
     var ano by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     val dataFormatada = "$dia/${mes + 1}/$ano"
 
-    // --- ESTADOS DE PROFISSIONAL E HORÁRIO ---
+    // --- ESTADOS DE PROFISSIONAL, HORÁRIO E E-MAIL MANUAL ---
     var barbeiros by remember { mutableStateOf<List<Profissional>>(emptyList()) }
     var barbeiroSelecionado by remember { mutableStateOf<Profissional?>(null) }
     var horarioSelecionado by remember { mutableStateOf("") }
     var horariosOcupados by remember { mutableStateOf<List<String>>(emptyList()) }
+    var emailClienteInput by remember { mutableStateOf("") } // <-- Campo do Admin
 
-    // Busca no Firebase ao abrir a tela
     LaunchedEffect(Unit) {
         buscarProfissionais { lista ->
             barbeiros = lista
@@ -63,14 +69,13 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
         }
     }
 
-    // Efeito para buscar horários ocupados sempre que mudar o barbeiro ou a data
     LaunchedEffect(barbeiroSelecionado, dataFormatada) {
         barbeiroSelecionado?.let { prof ->
             buscarHorariosOcupados(prof.nome, dataFormatada) { lista ->
                 horariosOcupados = lista
             }
         } ?: run {
-            horariosOcupados = emptyList() // Limpa se não houver barbeiro
+            horariosOcupados = emptyList()
         }
     }
 
@@ -86,11 +91,18 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             ano = selectedYear
             mes = selectedMonth
             dia = selectedDay
-            horarioSelecionado = "" // Reseta o horário ao mudar a data
+            horarioSelecionado = ""
         }, ano, mes, dia
     ).apply { datePicker.minDate = calendar.timeInMillis }
 
-    // --- DIÁLOGOS (MODAIS) ---
+    // Validação para ativar o botão confirmar
+    val isFormularioValido = if (isAdmin) {
+        horarioSelecionado.isNotEmpty() && emailClienteInput.isNotBlank()
+    } else {
+        horarioSelecionado.isNotEmpty()
+    }
+
+    // --- DIÁLOGOS ---
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
@@ -102,6 +114,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
                             data = dataFormatada,
                             horario = horarioSelecionado,
                             servico = servicoEscolhido,
+                            emailClienteManual = if (isAdmin) emailClienteInput else null, // Passa o e-mail customizado
                             onSucesso = {
                                 showConfirmDialog = false
                                 showSuccessDialog = true
@@ -124,6 +137,9 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             title = { Text("Resumo do Agendamento", color = Color.White) },
             text = {
                 Column {
+                    if (isAdmin) {
+                        Text("Cliente: $emailClienteInput", color = Color.Cyan)
+                    }
                     Text("Serviço: $servicoEscolhido", color = Color.White)
                     Text("Profissional: ${barbeiroSelecionado?.nome ?: ""}", color = Color.White)
                     Text("Data: $dataFormatada", color = Color.White)
@@ -156,7 +172,6 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             .background(BackgroundBlack)
             .padding(16.dp)
     ) {
-        // Header com Calendário
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -178,7 +193,6 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             items(barbeiros) { barbeiro ->
                 val selecionado = barbeiroSelecionado == barbeiro
 
-                // Substituição da foto por um "Chip" com o nome do barbeiro
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -190,18 +204,36 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = barbeiro.nome,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(text = barbeiro.nome, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
+        // SE FOR ADMIN, EXIBE O CAMPO DE E-MAIL DO CLIENTE AQUI:
+        if (isAdmin) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("E-mail do Cliente (Agendamento Presencial)", color = Color.Cyan, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(4.dp))
+            TextField(
+                value = emailClienteInput,
+                onValueChange = { emailClienteInput = it },
+                placeholder = { Text("cliente@gmail.com", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = SurfaceGray,
+                    unfocusedContainerColor = SurfaceGray,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                singleLine = true
+            )
+        }
+
         HorizontalDivider(color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
 
-        // Grades de Horários
         Text("Manhã", color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
         LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.height(110.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(horariosManha) { hora ->
@@ -228,7 +260,7 @@ fun AgendamentoScreen(servicoEscolhido: String, onFinalizarClick: () -> Unit, on
             onClick = { showConfirmDialog = true },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-            enabled = horarioSelecionado.isNotEmpty(),
+            enabled = isFormularioValido, // Aplica a regra de validação
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("CONFIRMAR AGENDAMENTO", fontWeight = FontWeight.Bold)
